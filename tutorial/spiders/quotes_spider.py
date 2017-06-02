@@ -2,23 +2,22 @@
 # _*_ coding: utf-8 _*_
 
 import scrapy
+import lxml.html
 
 
 class QuoteSpider(scrapy.Spider):
     name = 'quotes'
-
-    def start_requests(self):
-        urls = [
-            'http://quotes.toscrape.com/page/1/',
-            'http://quotes.toscrape.com/page/2/'
-        ]
-        for url in urls:
-            yield scrapy.Request(url, callback=self.parse)
+    start_urls = [
+        'http://quotes.toscrape.com/page/1/',
+        'http://quotes.toscrape.com/page/2/'
+    ]
 
     def parse(self, response):
-        page = response.url.split('/')[-2]
-        html = response.body
-        filename = 'quote-%s.html' % page
-        with open(filename, 'wb') as fd:
-            fd.write(html)
-        self.log('Saved file %s' % filename)
+        tree = lxml.html.fromstring(response.text)
+        tags = tree.xpath('//div[@class="quote"]')
+        for t in tags:
+            text = t.xpath('./span[@class="text"]/text()')[0].strip(u'“”')
+            author = t.xpath('./span/small/text()')[0]
+            tags = t.xpath('./div/a/text()')
+            quote = dict(author=author, text=text, tags=tags)
+            yield quote
