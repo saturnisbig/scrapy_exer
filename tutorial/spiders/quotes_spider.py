@@ -6,17 +6,24 @@ import scrapy
 
 class QuoteSpider(scrapy.Spider):
     name = 'quotes'
-    start_urls = [
-        'http://quotes.toscrape.com/page/1/',
-    ]
+    # start_urls = [
+    #     'http://quotes.toscrape.com/page/1/',
+    # ]
+
+    def start_requests(self):
+        url = 'http://quotes.toscrape.com/'
+        tag = getattr(self, 'tag', None)
+        if tag is not None:
+            url = url + 'tag/' + tag
+        yield scrapy.Request(url, self.parse)
 
     def parse(self, response):
         # tree = lxml.html.fromstring(response.text)
         tags = response.xpath('//div[@class="quote"]')
         for t in tags:
-            text = t.xpath('./span[@class="text"]/text()')[0].strip(u'“”')
-            author = t.xpath('./span/small/text()')[0]
-            tags = t.xpath('./div/a/text()')
+            text = t.xpath('./span[@class="text"]/text()').extract_first().strip(u'“”')
+            author = t.xpath('./span/small/text()').extract_first()
+            tags = t.xpath('./div/a/text()').extract_first()
             quote = dict(author=author, text=text, tags=tags)
             yield quote
         try:
@@ -28,4 +35,3 @@ class QuoteSpider(scrapy.Spider):
             # url = response.urljoin(next_page)
             # yield scrapy.Request(url, callback=self.parse)
             yield response.follow(next_page, callback=self.parse)
-
